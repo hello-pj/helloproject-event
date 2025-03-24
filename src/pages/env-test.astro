@@ -1,0 +1,10 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EnvTest from '../components/EnvTest';
+---
+
+<Layout>
+  <div class="flex min-h-screen justify-center items-center">
+    <EnvTest client:load />
+  </div>
+</Layout>
