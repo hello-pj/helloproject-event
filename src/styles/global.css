@@ -1,1 +1,11 @@
-@import "tailwindcss";
+/* src/styles/global.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 以下、必要に応じてカスタムスタイルを追加 */
+
+body {
+    font-family: system-ui, sans-serif;
+}
