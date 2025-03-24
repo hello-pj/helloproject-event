@@ -56,8 +56,11 @@ export async function requestNotificationPermission() {
 export function initializeFirebaseMessaging() {
     if (typeof window === 'undefined') return;
 
+    const basePath =
+        import.meta.env.BASE_URL || '/';
+
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        navigator.serviceWorker.register(`${basePath}firebase-messaging-sw.js`)
             .then((registration) => {
                 console.log('Service Worker registered with scope:', registration.scope);
 
@@ -102,6 +105,5 @@ export function initializeFirebaseMessaging() {
             });
     }
 }
-
 // Firebaseアプリのインスタンスをエクスポート
 export default app;
