@@ -105,5 +105,5 @@ export function initializeFirebaseMessaging() {
             });
     }
 }
-// Firebaseアプリのインスタンスをエクスポート
+// Firebaseアプリのインスタンスをエクスポートする
 export default app;
