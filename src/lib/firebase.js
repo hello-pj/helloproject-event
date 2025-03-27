@@ -110,52 +110,30 @@ export async function requestNotificationPermission() {
 export function initializeFirebaseMessaging() {
     if (typeof window === 'undefined') return;
 
+    // ベースパスを正確に処理
     const basePath =
         import.meta.env.BASE_URL || '/';
+    const serviceWorkerPath = `${basePath}firebase-messaging-sw.js`.replace(/\/\/+/g, '/');
+
+    console.log('Base Path:', basePath);
+    console.log('Service Worker Full Path:', serviceWorkerPath);
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register(`${basePath}firebase-messaging-sw.js`)
+        navigator.serviceWorker.register(serviceWorkerPath, {
+                scope: basePath
+            })
             .then((registration) => {
-                console.log('Service Worker registered with scope:', registration.scope);
-
-                // 登録されたサービスワーカーにFirebase設定を送信
-                const sendConfig = (worker) => {
-                    if (worker) {
-                        worker.postMessage({
-                            type: 'INIT_FIREBASE',
-                            config: firebaseConfig
-                        });
-                    }
-                };
-
-                // アクティブなサービスワーカーがある場合
-                if (registration.active) {
-                    sendConfig(registration.active);
-                }
-
-                // 待機中のサービスワーカーがある場合
-                if (registration.waiting) {
-                    sendConfig(registration.waiting);
-                }
-
-                // インストール中のサービスワーカーがある場合
-                if (registration.installing) {
-                    registration.installing.addEventListener('statechange', (event) => {
-                        if (event.target.state === 'activated') {
-                            sendConfig(event.target);
-                        }
-                    });
-                }
-
-                // サービスワーカーの更新をリッスン
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (navigator.serviceWorker.controller) {
-                        sendConfig(navigator.serviceWorker.controller);
-                    }
-                });
+                console.log('Service Worker registered successfully');
+                console.log('Scope:', registration.scope);
+                console.log('Active worker:', registration.active);
             })
             .catch((error) => {
                 console.error('Service Worker registration failed:', error);
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
             });
     }
 }

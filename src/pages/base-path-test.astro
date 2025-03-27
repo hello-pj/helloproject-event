@@ -1,0 +1,10 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BasePathTest from '../components/BasePathTest';
+---
+
+<Layout>
+  <div class="flex min-h-screen justify-center items-center">
+    <BasePathTest client:only="react" />
+  </div>
+</Layout>

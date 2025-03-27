@@ -1,21 +1,24 @@
-// public/firebase-messaging-sw.js
+// Firebase Cloud Messaging用サービスワーカー
+
+// サービスワーカーのインストール時
 self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
+// サービスワーカーのアクティベート時
 self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
 
-// 設定情報はメインアプリから取得
+// クライアントからの設定情報を待機
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'INIT_FIREBASE') {
-        // メインアプリから送られてきた設定情報を使用
-        const firebaseConfig = event.data.config;
+        // Firebase SDKをインポート
+        importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js');
+        importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js');
 
-        // Firebase SDKのインポート
-        importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
-        importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+        // クライアントから送られた設定情報を使用
+        const firebaseConfig = event.data.config;
 
         // Firebaseの初期化
         firebase.initializeApp(firebaseConfig);
@@ -23,11 +26,11 @@ self.addEventListener('message', (event) => {
 
         // バックグラウンドメッセージ処理
         messaging.onBackgroundMessage((payload) => {
-            console.log('[firebase-messaging-sw.js] 受信したバックグラウンドメッセージ:', payload);
+            console.log('バックグラウンドメッセージ受信:', payload);
 
-            const notificationTitle = payload.notification.title;
+            const notificationTitle = payload.notification.title || 'デフォルトタイトル';
             const notificationOptions = {
-                body: payload.notification.body,
+                body: payload.notification.body || 'デフォルトメッセージ',
                 icon: '/favicon.svg'
             };
 

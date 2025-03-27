@@ -74,8 +74,9 @@ export default function AuthTest() {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2 border rounded"
             placeholder="メールアドレスを入力"
+            autoComplete="username"  // 修正
             required
-          />
+        />
         </div>
         
         <div>
@@ -86,6 +87,7 @@ export default function AuthTest() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-3 py-2 border rounded"
             placeholder="パスワードを入力"
+            autoComplete="current-password"
             required
           />
         </div>
