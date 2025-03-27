@@ -1,6 +1,13 @@
 // src/lib/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    sendPasswordResetEmail,
+    updateProfile
+} from 'firebase/auth';
 import { getMessaging, getToken } from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -21,6 +28,53 @@ export const auth = getAuth(app);
 
 // メッセージング機能（サーバーサイドレンダリング対応）
 export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+
+// ユーザー新規登録
+export async function signUp(email, password, displayName) {
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // ディスプレイ名の設定
+        await updateProfile(user, { displayName });
+
+        return user;
+    } catch (error) {
+        console.error('新規登録エラー:', error);
+        throw error;
+    }
+}
+
+// ログイン
+export async function signIn(email, password) {
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        return userCredential.user;
+    } catch (error) {
+        console.error('ログインエラー:', error);
+        throw error;
+    }
+}
+
+// ログアウト
+export async function logOut() {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error('ログアウトエラー:', error);
+        throw error;
+    }
+}
+
+// パスワードリセットメール送信
+export async function resetPassword(email) {
+    try {
+        await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+        console.error('パスワードリセットエラー:', error);
+        throw error;
+    }
+}
 
 // FCMトークンを取得する関数
 export async function requestNotificationPermission() {
@@ -105,5 +159,6 @@ export function initializeFirebaseMessaging() {
             });
     }
 }
+
 // Firebaseアプリのインスタンスをエクスポートする
 export default app;

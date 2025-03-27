@@ -1,0 +1,10 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AuthTest from '../components/AuthTest';
+---
+
+<Layout title="認証テスト">
+  <div class="flex min-h-screen justify-center items-center bg-gray-100">
+    <AuthTest client:load />
+  </div>
+</Layout>
