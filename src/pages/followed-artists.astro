@@ -1,0 +1,16 @@
+---
+// src/pages/followed-artists.astro
+import Layout from '../layouts/Layout.astro';
+import SideNavigation from '../components/SideNavigation';
+import FollowedArtists from '../components/FollowedArtists';
+---
+
+<Layout title="フォロー中のアーティスト - ハロプロイベント">
+  <div class="flex min-h-screen">
+    <SideNavigation activePage="followed-artists" client:load />
+    <main class="flex-1 p-6">
+      <h1 class="text-2xl font-bold mb-4">フォロー中のアーティスト</h1>
+      <FollowedArtists client:load />
+    </main>
+  </div>
+</Layout>

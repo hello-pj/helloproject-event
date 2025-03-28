@@ -2,15 +2,21 @@
 // src/pages/profile.astro
 import Layout from '../layouts/Layout.astro';
 import AuthHeader from '../components/AuthHeader';
+import SideNavigation from '../components/SideNavigation';
 import UserProfile from '../components/UserProfile';
 import ProtectedRoute from '../components/ProtectedRoute';
 ---
 
 <Layout title="プロフィール設定 - ハロプロイベント">
-  <AuthHeader client:load />
   <ProtectedRoute client:load>
-    <div class="container mx-auto py-8 px-4">
-      <UserProfile client:load />
+    <div class="flex min-h-screen bg-gray-100">
+      <SideNavigation activePage="profile" client:load />
+      <div class="flex-1">
+        <AuthHeader client:load />
+        <div class="container mx-auto p-6">
+          <UserProfile client:load />
+        </div>
+      </div>
     </div>
   </ProtectedRoute>
 </Layout>
