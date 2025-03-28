@@ -1,0 +1,11 @@
+---
+// src/pages/artists.astro
+import Layout from '../layouts/Layout.astro';
+import AuthHeader from '../components/AuthHeader';
+import ArtistList from '../components/ArtistList';
+---
+
+<Layout title="アーティスト一覧 - ハロプロイベント">
+  <AuthHeader client:load />
+  <ArtistList client:load />
+</Layout>
