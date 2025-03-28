@@ -6,22 +6,28 @@ import { onAuthStateChanged } from 'firebase/auth';
 export default function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     // Firebase Authの状態監視
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log("ProtectedRoute: Auth状態変更", currentUser ? "ログイン中" : "未ログイン");
       setUser(currentUser);
       setLoading(false);
       
       // ユーザーがログインしていない場合はログインページにリダイレクト
-      if (!currentUser && !loading) {
-        window.location.href = '/helloproject-event/login';
+      if (!currentUser) {
+        console.log("ProtectedRoute: ログインページへリダイレクト");
+        setRedirecting(true);
+        setTimeout(() => {
+          window.location.href = '/helloproject-event/login';
+        }, 100);
       }
     });
 
     // クリーンアップ
     return () => unsubscribe();
-  }, [loading]);
+  }, []);
 
   // ロード中は読み込み中表示
   if (loading) {
@@ -29,17 +35,20 @@ export default function ProtectedRoute({ children }) {
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
           <div className="spinner mb-2"></div>
-          <p>読み込み中...</p>
+          <p>認証状態を確認中...</p>
         </div>
       </div>
     );
   }
 
   // ユーザーがログインしていない場合は何も表示しない（リダイレクト中）
-  if (!user) {
+  if (!user || redirecting) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <p>ログインページにリダイレクトしています...</p>
+        <div className="text-center">
+          <div className="spinner mb-2"></div>
+          <p>ログインページにリダイレクトしています...</p>
+        </div>
       </div>
     );
   }
