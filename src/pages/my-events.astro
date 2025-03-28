@@ -1,0 +1,21 @@
+---
+// src/pages/my-events.astro
+import Layout from '../layouts/Layout.astro';
+import ProtectedRoute from '../components/ProtectedRoute';
+import { AuthProvider } from '../contexts/AuthContext';
+import AuthHeader from '../components/AuthHeader';
+
+// このページはログインしたユーザーのみがアクセス可能
+---
+
+<Layout title="マイイベント - ハロプロイベント">
+  <AuthProvider client:load>
+    <ProtectedRoute client:load>
+      <AuthHeader client:load />
+      <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">マイイベント</h1>
+        <p>ここにログインユーザー専用のコンテンツが表示されます</p>
+      </div>
+    </ProtectedRoute>
+  </AuthProvider>
+</Layout>

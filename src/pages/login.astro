@@ -1,0 +1,13 @@
+---
+// src/pages/login.astro
+import Layout from '../layouts/Layout.astro';
+import { AuthProvider } from '../contexts/AuthContext';
+import LoginPage from '../components/LoginPage';
+---
+
+<Layout title="ログイン - ハロプロイベント">
+  <!-- AuthProviderを確実にマウントさせるためにディレクティブを修正 -->
+  <AuthProvider client:only="react">
+    <LoginPage client:only="react" />
+  </AuthProvider>
+</Layout>
