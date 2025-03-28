@@ -1,4 +1,4 @@
-// src/lib/supabase.js を修正
+// src/lib/supabase.js
 import { createClient } from '@supabase/supabase-js';
 import { auth } from './firebase';
 
@@ -8,13 +8,24 @@ const supabaseUrl =
 const supabaseKey =
     import.meta.env.PUBLIC_SUPABASE_KEY;
 
-// Supabaseクライアントの初期化
-const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
+// Supabaseクライアントを初期化
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Firebase認証に基づいてSupabaseリクエストを実行するラッパー関数
+export async function withAuth(callback) {
+    const user = auth.currentUser;
+
+    if (!user) {
+        throw new Error('認証が必要です');
     }
-});
+
+    try {
+        return await callback(supabase, user.uid);
+    } catch (error) {
+        console.error('Supabaseリクエストエラー:', error);
+        throw error;
+    }
+}
 
 // 注: setAuth は非推奨・削除されたため、この関数の実装を変更
 export async function setSupabaseAuthWithFirebase() {

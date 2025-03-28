@@ -131,6 +131,7 @@ export default function FollowedArtists() {
     // ログインユーザーのデータがない場合
     return (
       <div>
+       
         <div className="p-4 bg-gray-50 rounded-md mb-4">
           <p>フォロー中のアーティストがありません。アーティスト一覧からフォローしてみましょう。</p>
           <a href="/helloproject-event/artists" className="mt-2 inline-block text-blue-500 hover:underline">
@@ -170,41 +171,43 @@ export default function FollowedArtists() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      {artists.map(artist => (
-        <div key={artist.id} className="p-4 bg-white shadow rounded-lg hover:shadow-md transition">
-          <div className="flex items-center">
-            {artist.image_url ? (
-              <img 
-                src={artist.image_url} 
-                alt={artist.name} 
-                className="w-12 h-12 rounded-full object-cover mr-3"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                <span className="text-gray-500 text-xl">🎤</span>
-              </div>
-            )}
-            <div>
-              <h3 className="font-medium">{artist.name}</h3>
-              {artist.category && (
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                  {artist.category}
-                </span>
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {artists.map(artist => (
+          <div key={artist.id} className="p-4 bg-white shadow rounded-lg hover:shadow-md transition">
+            <div className="flex items-center">
+              {artist.image_url ? (
+                <img 
+                  src={artist.image_url} 
+                  alt={artist.name} 
+                  className="w-12 h-12 rounded-full object-cover mr-3"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                  <span className="text-gray-500 text-xl">🎤</span>
+                </div>
               )}
+              <div>
+                <h3 className="font-medium">{artist.name}</h3>
+                {artist.category && (
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                    {artist.category}
+                  </span>
+                )}
+              </div>
             </div>
+            {artist.description && (
+              <p className="mt-2 text-sm text-gray-600 line-clamp-2">{artist.description}</p>
+            )}
+            <a 
+              href={`/helloproject-event/artists/${artist.id}`} 
+              className="mt-3 text-sm text-blue-500 hover:underline inline-block"
+            >
+              詳細を見る
+            </a>
           </div>
-          {artist.description && (
-            <p className="mt-2 text-sm text-gray-600 line-clamp-2">{artist.description}</p>
-          )}
-          <a 
-            href={`/helloproject-event/artists/${artist.id}`} 
-            className="mt-3 text-sm text-blue-500 hover:underline inline-block"
-          >
-            詳細を見る
-          </a>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

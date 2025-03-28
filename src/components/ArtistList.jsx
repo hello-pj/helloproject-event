@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../lib/firebase';
 import supabase from '../lib/supabase';
+import { addToFavorites, removeFromFavorites } from '../lib/data-service';
 
 export default function ArtistList() {
   const [artists, setArtists] = useState([]);
@@ -52,7 +53,7 @@ export default function ArtistList() {
   }, []);
   
   // アーティストのお気に入り登録・解除
-const toggleFavorite = async (artistId) => {
+  const toggleFavorite = async (artistId) => {
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -61,55 +62,18 @@ const toggleFavorite = async (artistId) => {
         return;
       }
       
-      console.log('現在のユーザーID:', user.uid);
-      console.log('現在のお気に入り:', userFavorites);
-      console.log('トグル対象のアーティストID:', artistId);
-      
       if (userFavorites.includes(artistId)) {
-        // お気に入り解除
-        console.log('お気に入り解除処理を実行します');
-        
-        const { error } = await supabase
-          .from('user_favorites')
-          .delete()
-          .eq('user_id', user.uid)
-          .eq('artist_id', artistId);
-          
-        if (error) {
-          console.error('お気に入り解除エラー:', error);
-          throw error;
-        }
-        
-        console.log('お気に入り解除成功');
+        // お気に入り解除 - サービス関数を使用
+        await removeFromFavorites(artistId);
         setUserFavorites(userFavorites.filter(id => id !== artistId));
       } else {
-        // お気に入り登録
-        console.log('お気に入り登録処理を実行します');
-        
-        const newFavorite = {
-          user_id: user.uid,
-          artist_id: artistId,
-          notification_enabled: true,
-          created_at: new Date().toISOString()
-        };
-        
-        console.log('登録するデータ:', newFavorite);
-        
-        const { error } = await supabase
-          .from('user_favorites')
-          .insert(newFavorite);
-          
-        if (error) {
-          console.error('お気に入り登録エラー:', error);
-          throw error;
-        }
-        
-        console.log('お気に入り登録成功');
+        // お気に入り登録 - サービス関数を使用
+        await addToFavorites(artistId);
         setUserFavorites([...userFavorites, artistId]);
       }
     } catch (err) {
       console.error('お気に入り処理エラー:', err);
-      alert('お気に入りの更新に失敗しました');
+      alert('お気に入りの更新に失敗しました: ' + err.message);
     }
   };
   
