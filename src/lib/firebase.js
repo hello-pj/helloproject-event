@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { syncUserWithSupabase } from './user-service';
 
 const firebaseConfig = {
     apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
@@ -42,6 +43,12 @@ export async function signUp(email, password, displayName) {
         // ディスプレイ名の設定
         await updateProfile(user, { displayName });
 
+        // Supabaseにユーザー情報を同期
+        await syncUserWithSupabase({
+            ...user,
+            displayName // updateProfileの結果がすぐに反映されないため手動で追加
+        });
+
         return user;
     } catch (error) {
         console.error('新規登録エラー:', error);
@@ -53,7 +60,12 @@ export async function signUp(email, password, displayName) {
 export async function signIn(email, password) {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        return userCredential.user;
+        const user = userCredential.user;
+
+        // Supabaseにユーザー情報を同期
+        await syncUserWithSupabase(user);
+
+        return user;
     } catch (error) {
         console.error('ログインエラー:', error);
         throw error;
@@ -64,8 +76,11 @@ export async function signIn(email, password) {
 export async function signInWithGoogle() {
     try {
         const result = await signInWithPopup(auth, googleProvider);
-        // Google アカウントからの情報が返される
         const user = result.user;
+
+        // Supabaseにユーザー情報を同期
+        await syncUserWithSupabase(user);
+
         return user;
     } catch (error) {
         console.error('Google認証エラー:', error);

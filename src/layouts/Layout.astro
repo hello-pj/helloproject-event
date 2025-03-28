@@ -34,10 +34,12 @@ const basePath = import.meta.env.BASE_URL;
     <script>
       // クライアントサイドでFirebaseを初期化
       import { initializeFirebaseMessaging } from '../lib/firebase';
+      import { setupUserSync } from '../lib/user-service';
       
       // ページ読み込み完了後に初期化
       document.addEventListener('DOMContentLoaded', () => {
         initializeFirebaseMessaging();
+        setupUserSync(); // ユーザー同期の設定を追加
       });
     </script>
   </body>
