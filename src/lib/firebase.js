@@ -9,6 +9,7 @@ import {
     updateProfile
 } from 'firebase/auth';
 import { getMessaging, getToken } from 'firebase/messaging';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const firebaseConfig = {
     apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
@@ -22,6 +23,9 @@ const firebaseConfig = {
 
 // Firebaseアプリの初期化
 const app = initializeApp(firebaseConfig);
+
+// Google認証プロバイダの作成
+const googleProvider = new GoogleAuthProvider();
 
 // 認証機能のエクスポート
 export const auth = getAuth(app);
@@ -52,6 +56,19 @@ export async function signIn(email, password) {
         return userCredential.user;
     } catch (error) {
         console.error('ログインエラー:', error);
+        throw error;
+    }
+}
+
+// Googleでサインイン
+export async function signInWithGoogle() {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        // Google アカウントからの情報が返される
+        const user = result.user;
+        return user;
+    } catch (error) {
+        console.error('Google認証エラー:', error);
         throw error;
     }
 }
