@@ -113,14 +113,21 @@ export function initializeFirebaseMessaging() {
     // ベースパスを正確に処理
     const basePath =
         import.meta.env.BASE_URL || '/';
-    const serviceWorkerPath = `${basePath}firebase-messaging-sw.js`.replace(/\/\/+/g, '/');
+
+    // パスの末尾にスラッシュがない場合は追加
+    const normalizedBasePath = basePath.endsWith('/') ? basePath : `${basePath}/`;
+
+    // パスを正しく構築
+    const serviceWorkerPath = `${normalizedBasePath}firebase-messaging-sw.js`;
 
     console.log('Base Path:', basePath);
+    console.log('Normalized Base Path:', normalizedBasePath);
     console.log('Service Worker Full Path:', serviceWorkerPath);
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register(serviceWorkerPath, {
-                scope: basePath
+                // scopeを正規化されたパスに変更
+                scope: normalizedBasePath
             })
             .then((registration) => {
                 console.log('Service Worker registered successfully');
