@@ -18,29 +18,65 @@ export default function OnboardingFlow() {
 
   // 次のステップに進む
 const nextStep = async (data) => {
-    console.log('現在のステップ:', step); // デバッグ用
-    console.log('受け取ったデータ:', data); // デバッグ用
-    
     setLoading(true);
     
     // 現在のステップのデータを保存
     const updatedUserData = { ...userData, ...data };
     setUserData(updatedUserData);
     
-    console.log('更新後のユーザーデータ:', updatedUserData); // デバッグ用
-    
     // 最後のステップの場合はデータをSupabaseに保存
     if (step === 3) {
       try {
-        // Supabaseへの保存処理（変更なし）
+        const user = auth.currentUser;
+        if (user) {
+          // ユーザー情報更新
+          await supabase
+            .from('users')
+            .update({
+              location: updatedUserData.location,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.uid);
+          
+          // 通知設定更新
+          await supabase
+            .from('user_settings')
+            .update({
+              notification_enabled: updatedUserData.notificationsEnabled,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.uid);
+          
+          // お気に入りアーティスト追加
+            if (updatedUserData.favoriteArtists && updatedUserData.favoriteArtists.length > 0) {
+                // 各アーティストIDに対して一つのレコードを作成
+                const favoriteEntries = updatedUserData.favoriteArtists.map(artistId => ({
+                user_id: user.uid,
+                artist_id: artistId,
+                notification_enabled: updatedUserData.notificationsEnabled,
+                created_at: new Date().toISOString()
+                }));
+                
+                console.log('保存するお気に入りアーティスト:', favoriteEntries);
+                
+                const { data, error } = await supabase
+                .from('user_favorites')
+                .insert(favoriteEntries);
+                
+                if (error) {
+                console.error('お気に入りアーティスト保存エラー:', error);
+                throw error;
+                }
+            }
+        }
       } catch (error) {
         console.error('データ保存エラー:', error);
+        // エラーをユーザーに表示するなどの処理を追加
       }
     }
     
     setLoading(false);
-    // ステップを確実に増加させる
-    setStep(prevStep => prevStep + 1);
+    setStep(step + 1);
   };
 
   // 前のステップに戻る
