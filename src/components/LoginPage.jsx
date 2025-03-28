@@ -17,7 +17,7 @@ export default function LoginPage() {
     if (success) {
       // ログイン/登録成功後、少し待ってからリダイレクト
       const timer = setTimeout(() => {
-        window.location.href = '/helloproject-event/';
+        window.location.href = '/helloproject-event/onboarding';
       }, 1500);
       
       return () => clearTimeout(timer);

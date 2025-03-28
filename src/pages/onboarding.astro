@@ -1,0 +1,12 @@
+---
+// src/pages/onboarding.astro
+import Layout from '../layouts/Layout.astro';
+import OnboardingFlow from '../components/OnboardingFlow';
+import ProtectedRoute from '../components/ProtectedRoute';
+---
+
+<Layout title="アカウント設定 - ハロプロイベント">
+  <ProtectedRoute client:load>
+    <OnboardingFlow client:only="react" />
+  </ProtectedRoute>
+</Layout>
