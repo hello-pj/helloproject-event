@@ -6,16 +6,16 @@ export default function ArtistSelection({ nextStep, userData }) {
   const [artists, setArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedArtists, setSelectedArtists] = useState(userData.favoriteArtists || []);
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     // アーティスト一覧を取得
     const fetchArtists = async () => {
       try {
+        // アーティスト一覧を取得
         const { data, error } = await supabase
           .from('artists')
-          .select('id, name, image_url')
-          .order('name');
+          .select('id, name, image_url, sort_order')
+          .order('sort_order');
           
         if (error) throw error;
         
@@ -25,11 +25,13 @@ export default function ArtistSelection({ nextStep, userData }) {
           // データがない場合はダミーデータを使用
           console.warn('アーティストデータが取得できないため、ダミーデータを使用します');
           const dummyArtists = [
-            { id: '1', name: 'モーニング娘。', image_url: 'https://placehold.co/200x200?text=モーニング娘。' },
-            { id: '2', name: 'アンジュルム', image_url: 'https://placehold.co/200x200?text=アンジュルム' },
-            { id: '3', name: 'Juice=Juice', image_url: 'https://placehold.co/200x200?text=Juice=Juice' },
-            { id: '4', name: 'つばきファクトリー', image_url: 'https://placehold.co/200x200?text=つばきファクトリー' },
-            { id: '5', name: 'BEYOOOOONDS', image_url: 'https://placehold.co/200x200?text=BEYOOOOONDS' }
+            { id: 'c1c3ccef-504b-4ae9-9b4a-3cdfd3ba795f', name: 'モーニング娘。\'25', image_url: 'https://hello-pj.github.io/img/morning_musume_image.jpg', sort_order: 1 },
+            { id: '0d9d488d-dc9b-4626-99d2-45211db87d5c', name: 'アンジュルム', image_url: 'https://hello-pj.github.io/img/angerme_image.jpg', sort_order: 2 },
+            { id: '84d0bbd4-b3d3-4ed8-8e9e-91c7667a3e11', name: 'Juice=Juice', image_url: 'https://hello-pj.github.io/img/juice_juice_image.jpg', sort_order: 3 },
+            { id: '67c0b98b-35c6-4dc6-891d-a1b3b550068d', name: 'つばきファクトリー', image_url: 'https://hello-pj.github.io/img/tsubaki_factory_image.jpg', sort_order: 4 },
+            { id: 'c724e3f5-e91d-4852-930a-77957bc472db', name: 'BEYOOOOONDS', image_url: 'https://hello-pj.github.io/img/beyooooonds_image.jpg', sort_order: 5 },
+            { id: 'e4f7af6f-8a7d-49eb-ae4f-2a3972da83a5', name: 'OCHA NORMA', image_url: 'https://hello-pj.github.io/img/ocha_norma_image.jpg', sort_order: 6 },
+            { id: 'b1fc0cd3-9eed-4761-8436-173fb515d056', name: 'ロージークロニクル', image_url: 'https://hello-pj.github.io/img/rosy_chronicle_image.jpg', sort_order: 7 }
           ];
           setArtists(dummyArtists);
         }
@@ -37,11 +39,13 @@ export default function ArtistSelection({ nextStep, userData }) {
         console.error('アーティスト取得エラー:', error);
         // エラー時もダミーデータを使用
         const dummyArtists = [
-          { id: '1', name: 'モーニング娘。', image_url: 'https://placehold.co/200x200?text=モーニング娘。' },
-          { id: '2', name: 'アンジュルム', image_url: 'https://placehold.co/200x200?text=アンジュルム' },
-          { id: '3', name: 'Juice=Juice', image_url: 'https://placehold.co/200x200?text=Juice=Juice' },
-          { id: '4', name: 'つばきファクトリー', image_url: 'https://placehold.co/200x200?text=つばきファクトリー' },
-          { id: '5', name: 'BEYOOOOONDS', image_url: 'https://placehold.co/200x200?text=BEYOOOOONDS' }
+          { id: 'c1c3ccef-504b-4ae9-9b4a-3cdfd3ba795f', name: 'モーニング娘。\'25', image_url: 'https://hello-pj.github.io/img/morning_musume_image.jpg', sort_order: 1 },
+          { id: '0d9d488d-dc9b-4626-99d2-45211db87d5c', name: 'アンジュルム', image_url: 'https://hello-pj.github.io/img/angerme_image.jpg', sort_order: 2 },
+          { id: '84d0bbd4-b3d3-4ed8-8e9e-91c7667a3e11', name: 'Juice=Juice', image_url: 'https://hello-pj.github.io/img/juice_juice_image.jpg', sort_order: 3 },
+          { id: '67c0b98b-35c6-4dc6-891d-a1b3b550068d', name: 'つばきファクトリー', image_url: 'https://hello-pj.github.io/img/tsubaki_factory_image.jpg', sort_order: 4 },
+          { id: 'c724e3f5-e91d-4852-930a-77957bc472db', name: 'BEYOOOOONDS', image_url: 'https://hello-pj.github.io/img/beyooooonds_image.jpg', sort_order: 5 },
+          { id: 'e4f7af6f-8a7d-49eb-ae4f-2a3972da83a5', name: 'OCHA NORMA', image_url: 'https://hello-pj.github.io/img/ocha_norma_image.jpg', sort_order: 6 },
+          { id: 'b1fc0cd3-9eed-4761-8436-173fb515d056', name: 'ロージークロニクル', image_url: 'https://hello-pj.github.io/img/rosy_chronicle_image.jpg', sort_order: 7 }
         ];
         setArtists(dummyArtists);
       } finally {
@@ -61,11 +65,6 @@ export default function ArtistSelection({ nextStep, userData }) {
     }
   };
 
-  // 検索フィルター
-  const filteredArtists = artists.filter(artist => 
-    artist.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   // 次へ進む
   const handleNext = () => {
     console.log('選択されたアーティスト:', selectedArtists); // デバッグ用
@@ -79,36 +78,7 @@ export default function ArtistSelection({ nextStep, userData }) {
         あなたが好きなアーティストを選択して、最新のイベント情報を受け取りましょう。
       </p>
 
-      {/* 検索ボックス */}
-      <div className="mb-6">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-          </div>
-          <input
-            type="search"
-            className="block w-full p-4 pl-10 text-sm border rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="アーティストを検索..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* カテゴリータブ */}
-      <div className="flex overflow-x-auto pb-2 mb-4 space-x-2">
-        {['おすすめ', '人気', 'アイドル', '声優', 'バンド'].map((category) => (
-          <button
-            key={category}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 whitespace-nowrap"
-            onClick={() => {/* カテゴリーフィルタリング */}}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
+      {/* 検索ボックスと絞り込みボタンを削除 */}
 
       {loading ? (
         <div className="flex justify-center my-8">
@@ -118,7 +88,7 @@ export default function ArtistSelection({ nextStep, userData }) {
         <>
           {/* アーティスト一覧 */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
-            {filteredArtists.map((artist) => (
+            {artists.map((artist) => (
               <div
                 key={artist.id}
                 className={`relative flex flex-col items-center p-2 rounded-lg cursor-pointer transition-all ${
@@ -181,20 +151,20 @@ export default function ArtistSelection({ nextStep, userData }) {
       )}
 
       {/* フッターボタン */}
-        <div className="mt-8 flex justify-between">
+      <div className="mt-8 flex justify-between">
         <div></div>
         <button
-            onClick={handleNext}
-            className={`px-6 py-2 text-white rounded-md transition ${
+          onClick={handleNext}
+          className={`px-6 py-2 text-white rounded-md transition ${
             selectedArtists.length > 0
-                ? 'bg-blue-500 hover:bg-blue-600'
-                : 'bg-gray-400 cursor-not-allowed'
-            }`}
-            disabled={selectedArtists.length === 0}
+              ? 'bg-blue-500 hover:bg-blue-600'
+              : 'bg-gray-400 cursor-not-allowed'
+          }`}
+          disabled={selectedArtists.length === 0}
         >
-            次へ
+          次へ
         </button>
-        </div>
+      </div>
     </div>
   );
 }
