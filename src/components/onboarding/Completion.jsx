@@ -1,7 +1,41 @@
 // src/components/onboarding/Completion.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import supabase from '../../lib/supabase';
 
 export default function Completion({ userData }) {
+  const [artistNames, setArtistNames] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // アーティスト情報を取得
+  useEffect(() => {
+    async function fetchArtistData() {
+      try {
+        if (userData.favoriteArtists && userData.favoriteArtists.length > 0) {
+          const { data, error } = await supabase
+            .from('artists')
+            .select('id, name')
+            .in('id', userData.favoriteArtists);
+            
+          if (error) throw error;
+          
+          // IDをキーとした名前のマッピングを作成
+          const artistMap = {};
+          data.forEach(artist => {
+            artistMap[artist.id] = artist.name;
+          });
+          
+          setArtistNames(artistMap);
+        }
+      } catch (error) {
+        console.error('アーティスト情報取得エラー:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchArtistData();
+  }, [userData.favoriteArtists]);
+
   // ホームページへ移動
   const goToHome = () => {
     window.location.href = '/helloproject-event/';
@@ -10,6 +44,11 @@ export default function Completion({ userData }) {
   // アカウント設定へ移動
   const goToAccount = () => {
     window.location.href = '/helloproject-event/profile';
+  };
+
+  // アーティストIDから名前を取得
+  const getArtistName = (artistId) => {
+    return artistNames[artistId] || artistId; // 名前が取得できない場合はIDを表示
   };
 
   return (
@@ -34,10 +73,12 @@ export default function Completion({ userData }) {
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-700 mb-2">フォロー中のアーティスト</h4>
           <div className="flex flex-wrap gap-2">
-            {userData.favoriteArtists && userData.favoriteArtists.length > 0 ? (
+            {loading ? (
+              <span className="text-sm text-gray-500">読み込み中...</span>
+            ) : userData.favoriteArtists && userData.favoriteArtists.length > 0 ? (
               userData.favoriteArtists.map((artistId, index) => (
                 <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                  {artistId} {/* 実際にはアーティスト名を表示 */}
+                  {getArtistName(artistId)}
                 </span>
               ))
             ) : (
