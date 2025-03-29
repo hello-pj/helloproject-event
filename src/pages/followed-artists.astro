@@ -11,12 +11,12 @@ import { AuthProvider } from '../contexts/AuthContext';
 <Layout title="フォロー中のアーティスト - ハロプロイベント">
   <AuthProvider client:only="react">
     <ProtectedRoute client:load>
-      <div class="flex min-h-screen">
+      <div class="flex min-h-screen bg-gray-50">
         <SideNavigation activePage="followed-artists" client:load />
         <div class="flex-1">
           <AuthHeader client:load />
           <main class="p-6">
-            <h1 class="text-2xl font-bold mb-4">フォロー中のアーティスト</h1>
+            <h1 class="text-2xl font-bold mb-6 pl-2 border-l-4 border-blue-500">フォロー中のアーティスト</h1>
             <FollowedArtists client:load />
           </main>
         </div>
