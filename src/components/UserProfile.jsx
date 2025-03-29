@@ -1,6 +1,6 @@
 // src/components/UserProfile.jsx
 import React, { useState, useEffect } from 'react';
-import { auth } from '../lib/firebase';
+import { auth, updateProfile } from '../lib/firebase';
 import supabase from '../lib/supabase';
 
 export default function UserProfile() {
@@ -74,40 +74,49 @@ export default function UserProfile() {
     fetchUserProfile();
   }, []);
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
+// src/components/UserProfile.jsx の handleUpdateProfile 関数を修正
+const handleUpdateProfile = async (e) => {
+  e.preventDefault();
+  
+  try {
+    setUpdating(true);
+    setUpdateMessage('');
     
-    try {
-      setUpdating(true);
-      setUpdateMessage('');
-      
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('ユーザーがログインしていません');
-      }
-
-      // Supabaseプロフィールを更新
-      const { error } = await supabase
-        .from('users')
-        .update({
-          display_name: displayName,
-          location: location,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', currentUser.uid);
-
-      if (error) {
-        throw error;
-      }
-
-      setUpdateMessage('プロフィールを更新しました');
-    } catch (err) {
-      console.error('プロフィール更新エラー:', err);
-      setUpdateMessage('更新に失敗しました: ' + err.message);
-    } finally {
-      setUpdating(false);
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error('ユーザーがログインしていません');
     }
-  };
+
+    // Firebaseのプロフィールを更新
+    await updateProfile(currentUser, {
+      displayName: displayName
+    });
+
+    // Supabaseプロフィールを更新
+    const { error } = await supabase
+      .from('users')
+      .update({
+        display_name: displayName,
+        location: location,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', currentUser.uid);
+
+    if (error) {
+      throw error;
+    }
+
+    // 更新が成功したら、最新のユーザー情報を取得する
+    await currentUser.reload();  // ユーザー情報をリロード
+    
+    setUpdateMessage('プロフィールを更新しました');
+  } catch (err) {
+    console.error('プロフィール更新エラー:', err);
+    setUpdateMessage('更新に失敗しました: ' + err.message);
+  } finally {
+    setUpdating(false);
+  }
+};
 
   if (loading) {
     return <div className="text-center p-4">読み込み中...</div>;

@@ -6,7 +6,7 @@ import {
     signInWithEmailAndPassword,
     signOut,
     sendPasswordResetEmail,
-    updateProfile
+    updateProfile // updateProfileを追加
 } from 'firebase/auth';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -30,6 +30,7 @@ const googleProvider = new GoogleAuthProvider();
 
 // 認証機能のエクスポート
 export const auth = getAuth(app);
+export { updateProfile }; // updateProfileもエクスポート
 
 // メッセージング機能（サーバーサイドレンダリング対応）
 export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
