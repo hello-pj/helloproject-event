@@ -1,6 +1,7 @@
 // src/components/LoginPage.jsx
 import React, { useState, useEffect } from 'react';
 import { signIn, signUp, resetPassword, signInWithGoogle } from '../lib/firebase';
+import supabase from '../lib/supabase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,18 +12,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [success, setSuccess] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState('');
   
   // ログイン状態が変わった場合もチェック
   useEffect(() => {
-    if (success) {
+    if (success && redirectUrl) {
       // ログイン/登録成功後、少し待ってからリダイレクト
       const timer = setTimeout(() => {
-        window.location.href = '/helloproject-event/onboarding';
+        window.location.href = redirectUrl;
       }, 1500);
       
       return () => clearTimeout(timer);
     }
-  }, [success]);
+  }, [success, redirectUrl]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,12 +33,43 @@ export default function LoginPage() {
     
     try {
       if (isSignUp) {
+        // 新規登録処理
         await signUp(email, password, displayName);
         setMessage('アカウントが作成されました！リダイレクトします...');
+        setRedirectUrl('/helloproject-event/onboarding');
         setSuccess(true);
       } else {
-        await signIn(email, password);
+        // ログイン処理
+        const user = await signIn(email, password);
         setMessage('ログインしました！リダイレクトします...');
+        
+        // オンボーディング完了状態を確認
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('onboarding_completed')
+            .eq('user_id', user.uid)
+            .single();
+          
+          if (error) {
+            console.error('オンボーディング状態確認エラー:', error);
+            throw error;
+          }
+          
+          console.log('オンボーディング状態:', data);
+          // onboarding_completedフラグに基づいてリダイレクト先を決定
+          const completed = data && data.onboarding_completed === true;
+          if (completed) {
+            setRedirectUrl('/helloproject-event/');
+          } else {
+            setRedirectUrl('/helloproject-event/onboarding');
+          }
+        } catch (error) {
+          console.error('オンボーディング状態確認失敗:', error);
+          // エラー時はデフォルトでオンボーディングへ
+          setRedirectUrl('/helloproject-event/onboarding');
+        }
+        
         setSuccess(true);
       }
     } catch (error) {
@@ -72,8 +105,36 @@ export default function LoginPage() {
     setLoading(true);
     
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
       setMessage('Googleアカウントでログインしました！リダイレクトします...');
+      
+      // オンボーディング完了状態を確認
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('onboarding_completed')
+          .eq('user_id', user.uid)
+          .single();
+        
+        if (error) {
+          console.error('オンボーディング状態確認エラー:', error);
+          throw error;
+        }
+        
+        console.log('オンボーディング状態:', data);
+        // onboarding_completedフラグに基づいてリダイレクト先を決定
+        const completed = data && data.onboarding_completed === true;
+        if (completed) {
+          setRedirectUrl('/helloproject-event/');
+        } else {
+          setRedirectUrl('/helloproject-event/onboarding');
+        }
+      } catch (error) {
+        console.error('オンボーディング状態確認失敗:', error);
+        // エラー時はデフォルトでオンボーディングへ
+        setRedirectUrl('/helloproject-event/onboarding');
+      }
+      
       setSuccess(true);
     } catch (error) {
       setError('Google認証エラー: ' + (error.message || '認証に失敗しました'));

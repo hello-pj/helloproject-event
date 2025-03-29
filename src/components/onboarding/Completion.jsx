@@ -1,10 +1,12 @@
 // src/components/onboarding/Completion.jsx
 import React, { useState, useEffect } from 'react';
 import supabase from '../../lib/supabase';
+import { auth } from '../../lib/firebase';
 
 export default function Completion({ userData }) {
   const [artistNames, setArtistNames] = useState({});
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
   // アーティスト情報を取得
   useEffect(() => {
@@ -37,13 +39,63 @@ export default function Completion({ userData }) {
   }, [userData.favoriteArtists]);
 
   // ホームページへ移動
-  const goToHome = () => {
-    window.location.href = '/helloproject-event/';
+  const goToHome = async () => {
+    try {
+      setUpdating(true);
+      const user = auth.currentUser;
+      if (user) {
+        // オンボーディング完了フラグを設定
+        const { data, error } = await supabase
+          .from('users')
+          .update({
+            onboarding_completed: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.uid);
+          
+        if (error) {
+          throw error;
+        }
+          
+        console.log('オンボーディング完了フラグを設定しました', data);
+      }
+      window.location.href = '/helloproject-event/';
+    } catch (error) {
+      console.error('オンボーディング完了更新エラー:', error);
+      // エラー時も一応ホームへリダイレクト
+      window.location.href = '/helloproject-event/';
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // アカウント設定へ移動
-  const goToAccount = () => {
-    window.location.href = '/helloproject-event/profile';
+  const goToAccount = async () => {
+    try {
+      setUpdating(true);
+      const user = auth.currentUser;
+      if (user) {
+        // オンボーディング完了フラグを設定（設定ページに移動する場合も完了とみなす）
+        const { error } = await supabase
+          .from('users')
+          .update({
+            onboarding_completed: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.uid);
+          
+        if (error) {
+          throw error;
+        }
+      }
+      window.location.href = '/helloproject-event/profile';
+    } catch (error) {
+      console.error('オンボーディング完了更新エラー:', error);
+      // エラー時も一応プロフィールへリダイレクト
+      window.location.href = '/helloproject-event/profile';
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // アーティストIDから名前を取得
@@ -159,9 +211,10 @@ export default function Completion({ userData }) {
       <div className="flex justify-center">
         <button
           onClick={goToHome}
+          disabled={updating}
           className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
         >
-          始める
+          {updating ? '処理中...' : '始める'}
         </button>
       </div>
     </div>

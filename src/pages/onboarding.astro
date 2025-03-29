@@ -3,11 +3,58 @@
 import Layout from '../layouts/Layout.astro';
 import OnboardingFlow from '../components/OnboardingFlow';
 import ProtectedRoute from '../components/ProtectedRoute';
+import { auth } from '../lib/firebase';
+import supabase from '../lib/supabase';
+
+// この関数はサーバーサイドでは実行されません
+// クライアントサイドのみで実行されるチェックを行うことになります
 ---
 
 <Layout title="アカウント設定 - ハロプロイベント">
-  <ProtectedRoute client:load>
-    <!-- client:onlyを使用してクライアントサイドでのみレンダリング -->
-    <OnboardingFlow client:only="react" />
+  <ProtectedRoute client:only="react">
+    <div id="onboarding-container">
+      <OnboardingFlow client:only="react" />
+    </div>
   </ProtectedRoute>
+
+  <script>
+    // クライアントサイドでのオンボーディング完了チェック
+    import { auth } from '../lib/firebase';
+    import { onAuthStateChanged } from 'firebase/auth';
+    import supabase from '../lib/supabase';
+    
+    async function checkOnboardingStatus() {
+      // ログインユーザーを取得
+      const user = auth.currentUser;
+      if (!user) return;
+      
+      try {
+        // オンボーディング完了状態をチェック
+        const { data, error } = await supabase
+          .from('users')
+          .select('onboarding_completed')
+          .eq('user_id', user.uid)
+          .single();
+        
+        if (error) throw error;
+        
+        // オンボーディングが完了している場合はホームにリダイレクト
+        if (data && data.onboarding_completed === true) {
+          console.log('オンボーディング完了済み。ホームにリダイレクトします。');
+          window.location.href = '/helloproject-event/';
+        }
+      } catch (error) {
+        console.error('オンボーディング状態確認エラー:', error);
+      }
+    }
+    
+    // ページロード時にチェック
+    document.addEventListener('DOMContentLoaded', () => {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          checkOnboardingStatus();
+        }
+      });
+    });
+  </script>
 </Layout>

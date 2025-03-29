@@ -8,13 +8,12 @@ import ProtectedRoute from '../components/ProtectedRoute';
 ---
 
 <Layout title="プロフィール設定 - ハロプロイベント">
-  <ProtectedRoute client:load>
+  <ProtectedRoute client:load requireOnboarding={true}>
     <div class="flex min-h-screen bg-gray-100">
       <SideNavigation activePage="profile" client:load />
       <div class="flex-1">
         <AuthHeader client:load />
         <div class="container mx-auto p-6">
-          <!-- client:onlyを使用してクライアントサイドでのみレンダリング -->
           <UserProfile client:only="react" />
         </div>
       </div>

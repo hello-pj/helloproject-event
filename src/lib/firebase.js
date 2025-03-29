@@ -11,6 +11,7 @@ import {
 import { getMessaging, getToken } from 'firebase/messaging';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { syncUserWithSupabase } from './user-service';
+import supabase from './supabase';
 
 const firebaseConfig = {
     apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
@@ -175,6 +176,25 @@ export function initializeFirebaseMessaging() {
                     stack: error.stack
                 });
             });
+    }
+}
+
+// オンボーディング状態をチェックする関数
+export async function checkUserOnboardingStatus(userId) {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('onboarding_completed')
+            .eq('user_id', userId)
+            .single();
+
+        if (error) throw error;
+
+        // Boolean型の比較に変更
+        return data && data.onboarding_completed === true;
+    } catch (error) {
+        console.error('オンボーディング状態確認エラー:', error);
+        return false;
     }
 }
 
