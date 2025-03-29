@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, updateProfile } from '../lib/firebase';
 import supabase from '../lib/supabase';
+import LocationSearch from './common/LocationSearch';
 
 export default function UserProfile() {
   const [profile, setProfile] = useState(null);
@@ -9,6 +10,7 @@ export default function UserProfile() {
   const [error, setError] = useState(null);
   const [displayName, setDisplayName] = useState('');
   const [location, setLocation] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [updating, setUpdating] = useState(false);
   const [updateMessage, setUpdateMessage] = useState('');
 
@@ -62,6 +64,11 @@ export default function UserProfile() {
           setProfile(userProfile);
           setDisplayName(userProfile.display_name || '');
           setLocation(userProfile.location || '');
+          
+          // 位置データがあれば設定
+          if (userProfile.location_data) {
+            setSelectedLocation(userProfile.location_data);
+          }
         }
       } catch (err) {
         console.error('プロフィール取得エラー:', err);
@@ -74,49 +81,63 @@ export default function UserProfile() {
     fetchUserProfile();
   }, []);
 
-// src/components/UserProfile.jsx の handleUpdateProfile 関数を修正
-const handleUpdateProfile = async (e) => {
-  e.preventDefault();
-  
-  try {
-    setUpdating(true);
-    setUpdateMessage('');
+  // 位置情報が選択されたときのハンドラ
+  const handleLocationSelect = (locationData) => {
+    setSelectedLocation(locationData);
+    setLocation(locationData.name);
+  };
+
+  // プロフィール更新
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
     
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      throw new Error('ユーザーがログインしていません');
-    }
+    try {
+      setUpdating(true);
+      setUpdateMessage('');
+      
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('ユーザーがログインしていません');
+      }
 
-    // Firebaseのプロフィールを更新
-    await updateProfile(currentUser, {
-      displayName: displayName
-    });
+      // Firebaseのプロフィールを更新
+      await updateProfile(currentUser, {
+        displayName: displayName
+      });
 
-    // Supabaseプロフィールを更新
-    const { error } = await supabase
-      .from('users')
-      .update({
+      // 更新するデータを準備
+      const updateData = {
         display_name: displayName,
         location: location,
         updated_at: new Date().toISOString()
-      })
-      .eq('user_id', currentUser.uid);
+      };
 
-    if (error) {
-      throw error;
+      // 選択された位置情報がある場合は位置データも保存
+      if (selectedLocation) {
+        updateData.location_data = selectedLocation;
+      }
+
+      // Supabaseプロフィールを更新
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('user_id', currentUser.uid);
+
+      if (error) {
+        throw error;
+      }
+
+      // 更新が成功したら、最新のユーザー情報を取得する
+      await currentUser.reload();  // ユーザー情報をリロード
+      
+      setUpdateMessage('プロフィールを更新しました');
+    } catch (err) {
+      console.error('プロフィール更新エラー:', err);
+      setUpdateMessage('更新に失敗しました: ' + err.message);
+    } finally {
+      setUpdating(false);
     }
-
-    // 更新が成功したら、最新のユーザー情報を取得する
-    await currentUser.reload();  // ユーザー情報をリロード
-    
-    setUpdateMessage('プロフィールを更新しました');
-  } catch (err) {
-    console.error('プロフィール更新エラー:', err);
-    setUpdateMessage('更新に失敗しました: ' + err.message);
-  } finally {
-    setUpdating(false);
-  }
-};
+  };
 
   if (loading) {
     return <div className="text-center p-4">読み込み中...</div>;
@@ -127,7 +148,7 @@ const handleUpdateProfile = async (e) => {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">プロフィール設定</h2>
       
       {updateMessage && (
@@ -158,16 +179,12 @@ const handleUpdateProfile = async (e) => {
           />
         </div>
         
-        <div>
-          <label className="block mb-1">お住まいの地域</label>
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
-            placeholder="例: 東京都、大阪府"
-          />
-        </div>
+        {/* 共通の位置検索コンポーネントを使用 */}
+        <LocationSearch 
+          initialLocation={location}
+          onLocationSelect={handleLocationSelect}
+          label="お住まいの地域"
+        />
         
         <button
           type="submit"

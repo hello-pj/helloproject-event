@@ -1,9 +1,9 @@
 ---
 // src/pages/profile.astro
 import Layout from '../layouts/Layout.astro';
-import AuthHeader from '../components/AuthHeader';
 import SideNavigation from '../components/SideNavigation';
 import UserProfile from '../components/UserProfile';
+import AuthHeader from '../components/AuthHeader';
 import ProtectedRoute from '../components/ProtectedRoute';
 ---
 
@@ -14,7 +14,8 @@ import ProtectedRoute from '../components/ProtectedRoute';
       <div class="flex-1">
         <AuthHeader client:load />
         <div class="container mx-auto p-6">
-          <UserProfile client:load />
+          <!-- client:onlyを使用してクライアントサイドでのみレンダリング -->
+          <UserProfile client:only="react" />
         </div>
       </div>
     </div>
