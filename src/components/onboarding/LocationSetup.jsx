@@ -1,6 +1,15 @@
 // src/components/onboarding/LocationSetup.jsx
-import React, { useState } from 'react';
-import { geocode } from '../../lib/openrouteservice';
+import React, { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// マーカーアイコンの問題を修正
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
+});
 
 export default function LocationSetup({ nextStep, prevStep, userData }) {
   const [location, setLocation] = useState(userData.location || '');
@@ -8,6 +17,30 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [error, setError] = useState('');
+  const mapRef = useRef(null);
+  const mapContainerRef = useRef(null);
+  const markerRef = useRef(null);
+
+  // 地図の初期化
+  useEffect(() => {
+    if (!mapRef.current && mapContainerRef.current) {
+      // 地図を初期化（日本の中心あたりを初期表示）
+      mapRef.current = L.map(mapContainerRef.current).setView([36.2048, 138.2529], 5);
+      
+      // OpenStreetMapのタイルレイヤーを追加
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(mapRef.current);
+    }
+
+    return () => {
+      // コンポーネントのアンマウント時に地図を破棄
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
 
   // 位置情報を検索
   const searchLocation = async () => {
@@ -15,31 +48,38 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
     
     setSearching(true);
     setError('');
+    setSearchResults([]);
     
     try {
-      // OpenRouteService APIを使用して位置検索
-      // 注: ここではシンプルな実装のためモックデータを使用
-      // 実際の実装では適切なAPIコールに置き換える
+      // Nominatim APIを使用して位置検索
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&country=jp&limit=5&addressdetails=1`, {
+        headers: {
+          'Accept-Language': 'ja'
+        }
+      });
       
-      // モックデータの例
-      setTimeout(() => {
-        const mockResults = [
-          { name: location + ' 市', address: '東京都' + location + '市', lat: 35.6894, lng: 139.6917 },
-          { name: location + ' 区', address: '東京都' + location + '区', lat: 35.7090, lng: 139.7320 },
-          { name: location + ' 町', address: '埼玉県' + location + '町', lat: 35.8585, lng: 139.6514 }
-        ];
-        setSearchResults(mockResults);
-        setSearching(false);
-      }, 1000);
+      if (!response.ok) {
+        throw new Error('位置情報の検索に失敗しました');
+      }
       
-      // 実際のAPIコールの例:
-      // const results = await geocode(location);
-      // setSearchResults(results);
+      const data = await response.json();
       
+      if (data && data.length > 0) {
+        // 検索結果を整形
+        const results = data.map(item => ({
+          name: item.display_name.split(',')[0],
+          address: item.display_name,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon)
+        }));
+        
+        setSearchResults(results);
+      } else {
+        setError('検索結果が見つかりませんでした。別の場所を試してください。');
+      }
     } catch (error) {
       console.error('位置検索エラー:', error);
       setError('位置情報の検索中にエラーが発生しました。もう一度お試しください。');
-      setSearchResults([]);
     } finally {
       setSearching(false);
     }
@@ -50,6 +90,22 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
     setSelectedLocation(location);
     setLocation(location.name);
     setSearchResults([]);
+    
+    // 地図を選択した位置に移動
+    if (mapRef.current) {
+      mapRef.current.setView([location.lat, location.lng], 12);
+      
+      // 既存のマーカーを削除
+      if (markerRef.current) {
+        markerRef.current.remove();
+      }
+      
+      // 新しいマーカーを追加
+      markerRef.current = L.marker([location.lat, location.lng])
+        .addTo(mapRef.current)
+        .bindPopup(location.name)
+        .openPopup();
+    }
   };
 
   // 現在位置を取得
@@ -59,17 +115,40 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
         async (position) => {
           const { latitude, longitude } = position.coords;
           
-          // ここでは、緯度・経度から場所名を取得する逆ジオコーディングは省略
-          // 実際の実装では適切なAPIを使用してください
-          
-          setSelectedLocation({
-            name: '現在地',
-            address: '現在地を使用',
-            lat: latitude,
-            lng: longitude
-          });
-          
-          setLocation('現在地');
+          try {
+            // 逆ジオコーディングで場所名を取得
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+              headers: {
+                'Accept-Language': 'ja'
+              }
+            });
+            
+            if (!response.ok) {
+              throw new Error('位置情報の変換に失敗しました');
+            }
+            
+            const data = await response.json();
+            const locationName = data.display_name.split(',')[0];
+            
+            const locationData = {
+              name: locationName,
+              address: data.display_name,
+              lat: latitude,
+              lng: longitude
+            };
+            
+            selectLocation(locationData);
+          } catch (error) {
+            console.error('逆ジオコーディングエラー:', error);
+            
+            // エラー時はシンプルな位置情報を使用
+            selectLocation({
+              name: '現在地',
+              address: '現在地',
+              lat: latitude,
+              lng: longitude
+            });
+          }
         },
         (error) => {
           console.error('位置情報の取得に失敗しました:', error);
@@ -78,6 +157,14 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
       );
     } else {
       setError('お使いのブラウザは位置情報をサポートしていません。');
+    }
+  };
+
+  // Enterキーでの検索
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchLocation();
     }
   };
 
@@ -113,7 +200,7 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
             placeholder="都市名や地域名を入力..."
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && searchLocation()}
+            onKeyDown={handleKeyDown}
           />
           <button
             onClick={searchLocation}
@@ -174,9 +261,9 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
         </div>
       )}
 
-      {/* 地図表示エリア (実際の実装ではここにLeafletマップを表示) */}
-      <div className="mb-6 w-full h-64 bg-gray-200 rounded-md flex items-center justify-center">
-        <span className="text-gray-500">ここに地図が表示されます</span>
+      {/* 地図表示エリア */}
+      <div className="mb-6 w-full h-64 bg-gray-200 rounded-md overflow-hidden">
+        <div ref={mapContainerRef} className="w-full h-full"></div>
       </div>
 
       {/* フッターボタン */}
