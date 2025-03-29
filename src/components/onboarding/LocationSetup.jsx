@@ -52,31 +52,40 @@ export default function LocationSetup({ nextStep, prevStep, userData }) {
     
     try {
       // Nominatim APIを使用して位置検索
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&country=jp&limit=5&addressdetails=1`, {
+      const query = encodeURIComponent(location.trim()); // 空白を除去
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&addressdetails=1`;
+   
+      console.log('APIリクエストURL:', url); // デバッグ用に出力
+      
+      const response = await fetch(url, {
         headers: {
           'Accept-Language': 'ja'
         }
       });
       
-      if (!response.ok) {
-        throw new Error('位置情報の検索に失敗しました');
-      }
-      
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        // 検索結果を整形
-        const results = data.map(item => ({
-          name: item.display_name.split(',')[0],
-          address: item.display_name,
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon)
-        }));
-        
-        setSearchResults(results);
-      } else {
-        setError('検索結果が見つかりませんでした。別の場所を試してください。');
-      }
+
+// 追加: レスポンスの内容を確認
+console.log('APIレスポンス:', response);
+
+if (!response.ok) {
+  throw new Error('位置情報の検索に失敗しました');
+}
+
+const data = await response.json();
+
+if (data && data.length > 0) {
+  // 検索結果を整形
+  const results = data.map(item => ({
+    name: item.display_name.split(',')[0],
+    address: item.display_name,
+    lat: parseFloat(item.lat),
+    lng: parseFloat(item.lon)
+  }));
+  
+  setSearchResults(results);
+} else {
+  setError('検索結果が見つかりませんでした。別の場所を試してください。');
+}
     } catch (error) {
       console.error('位置検索エラー:', error);
       setError('位置情報の検索中にエラーが発生しました。もう一度お試しください。');
