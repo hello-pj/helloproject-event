@@ -44,16 +44,23 @@ export default function AuthHeader() {
   return (
     <header className="bg-white shadow p-4">
       <div className="container mx-auto flex justify-between items-center">
-        <h1 className="text-xl font-bold">ハロプロイベント</h1>
+        <h1 className="text-xl font-bold">
+          <a href="/helloproject-event/" className="hover:text-blue-500 transition">
+            ハロプロイベント
+          </a>
+        </h1>
         
         {user ? (
           <div className="flex items-center space-x-4">
-            <span className="text-sm">
+            <a 
+              href="/helloproject-event/profile"
+              className="text-sm hover:text-blue-500 transition cursor-pointer"
+            >
               {user.displayName || user.email}
-            </span>
+            </a>
             <button
               onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition"
             >
               ログアウト
             </button>
@@ -61,7 +68,7 @@ export default function AuthHeader() {
         ) : (
           <a 
             href="/helloproject-event/login" 
-            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition"
           >
             ログイン
           </a>
