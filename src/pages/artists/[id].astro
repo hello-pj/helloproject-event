@@ -1,0 +1,68 @@
+---
+// src/pages/artists/[id].astro
+import Layout from '../../layouts/Layout.astro';
+import { AuthProvider } from '../../contexts/AuthContext';
+import AuthHeader from '../../components/AuthHeader';
+import ArtistDetail from '../../components/ArtistDetail';
+import supabase from '../../lib/supabase';
+
+// [id]パラメータを取得して、そのアーティストの情報をSupabaseから取得
+export async function getStaticPaths() {
+  // 開発環境でのパスを返す
+  if (process.env.NODE_ENV === 'development') {
+    return [
+      { params: { id: 'c1c3ccef-504b-4ae9-9b4a-3cdfd3ba795f' }, props: { artistId: 'c1c3ccef-504b-4ae9-9b4a-3cdfd3ba795f' } },
+      { params: { id: '0d9d488d-dc9b-4626-99d2-45211db87d5c' }, props: { artistId: '0d9d488d-dc9b-4626-99d2-45211db87d5c' } },
+      { params: { id: '84d0bbd4-b3d3-4ed8-8e9e-91c7667a3e11' }, props: { artistId: '84d0bbd4-b3d3-4ed8-8e9e-91c7667a3e11' } },
+      { params: { id: '67c0b98b-35c6-4dc6-891d-a1b3b550068d' }, props: { artistId: '67c0b98b-35c6-4dc6-891d-a1b3b550068d' } },
+      { params: { id: 'c724e3f5-e91d-4852-930a-77957bc472db' }, props: { artistId: 'c724e3f5-e91d-4852-930a-77957bc472db' } },
+      { params: { id: 'e4f7af6f-8a7d-49eb-ae4f-2a3972da83a5' }, props: { artistId: 'e4f7af6f-8a7d-49eb-ae4f-2a3972da83a5' } },
+      { params: { id: 'b1fc0cd3-9eed-4761-8436-173fb515d056' }, props: { artistId: 'b1fc0cd3-9eed-4761-8436-173fb515d056' } }
+    ];
+  }
+
+  try {
+    // Supabaseからすべてのアーティストを取得
+    const { data: artists, error } = await supabase
+      .from('artists')
+      .select('id, name');
+
+    if (error) {
+      console.error('アーティスト一覧取得エラー:', error);
+      return [];
+    }
+
+    // 各アーティストのIDに基づいてパスを生成
+    return artists.map(artist => ({
+      params: { id: artist.id },
+      props: { artistId: artist.id }
+    }));
+  } catch (error) {
+    console.error('アーティスト一覧生成エラー:', error);
+    return [];
+  }
+}
+
+// ページのプロパティ
+const { artistId } = Astro.props;
+
+// アーティスト情報を取得（SEOのため）
+const { data: artist, error } = await supabase
+  .from('artists')
+  .select('name, description, image_url')
+  .eq('id', artistId)
+  .single();
+
+// タイトルとメタ情報の設定
+const pageTitle = artist ? `${artist.name} - ハロプロイベント` : 'アーティスト詳細 - ハロプロイベント';
+const pageDescription = artist?.description || 'ハロプロジェクトのアーティスト情報とイベント一覧';
+const pageImage = artist?.image_url || '';
+---
+
+<Layout title={pageTitle} description={pageDescription}>
+  <AuthProvider client:load>
+    <AuthHeader client:load />
+    
+    <ArtistDetail artistId={artistId} client:load />
+  </AuthProvider>
+</Layout>
