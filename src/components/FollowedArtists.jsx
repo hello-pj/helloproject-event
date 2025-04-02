@@ -100,6 +100,14 @@ export default function FollowedArtists() {
     }
   };
 
+  // アーティスト詳細ページへ移動
+  const navigateToArtistDetail = (artistId, event) => {
+    // クリックイベントが発生した要素がボタンでなければ遷移
+    if (!event.target.closest('button')) {
+      window.location.href = `/helloproject-event/artists/${artistId}`;
+    }
+  };
+
   // フォロー中のアーティストとフォローしていないアーティストに分ける
   const followedArtistsList = artists.filter(artist => 
     followedArtists.includes(artist.id)
@@ -143,7 +151,10 @@ export default function FollowedArtists() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {followedArtistsList.map(artist => (
               <div key={artist.id} className="bg-white rounded-lg border shadow-sm p-4 flex flex-col">
-                <div className="flex items-center mb-3">
+                <div 
+                  className="flex items-center mb-3 cursor-pointer"
+                  onClick={(e) => navigateToArtistDetail(artist.id, e)}
+                >
                   {artist.image_url ? (
                     <img 
                       src={artist.image_url} 
@@ -156,7 +167,7 @@ export default function FollowedArtists() {
                     </div>
                   )}
                   <div>
-                    <h3 className="font-medium">{artist.name}</h3>
+                    <h3 className="font-medium hover:text-blue-500">{artist.name}</h3>
                     {artist.category && (
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
                         {artist.category}
@@ -213,7 +224,10 @@ export default function FollowedArtists() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {unfollowedArtistsList.map(artist => (
               <div key={artist.id} className="bg-white rounded-lg border shadow-sm p-4 flex flex-col">
-                <div className="flex items-center mb-3">
+                <div 
+                  className="flex items-center mb-3 cursor-pointer"
+                  onClick={(e) => navigateToArtistDetail(artist.id, e)}
+                >
                   {artist.image_url ? (
                     <img 
                       src={artist.image_url} 
@@ -226,7 +240,7 @@ export default function FollowedArtists() {
                     </div>
                   )}
                   <div>
-                    <h3 className="font-medium">{artist.name}</h3>
+                    <h3 className="font-medium hover:text-blue-500">{artist.name}</h3>
                     {artist.category && (
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
                         {artist.category}
