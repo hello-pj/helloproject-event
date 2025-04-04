@@ -308,11 +308,11 @@ export default function ArtistDetail({ artistId }) {
             {events.length > 0 ? (
               events.map(event => (
                 <div key={event.id} className="border-b last:border-b-0 p-4 flex flex-wrap md:flex-nowrap items-center hover:bg-gray-50 transition">
-                  {/* 日付 */}
-                  <div className="w-full md:w-auto md:mr-6 mb-4 md:mb-0 text-center">
-                    <div className="bg-gray-100 rounded p-2 inline-block">
+                  {/* 日付 - 幅を固定して統一感を出す */}
+                  <div className="w-24 md:w-28 md:mr-6 mb-4 md:mb-0 text-center flex-shrink-0">
+                    <div className="bg-gray-100 rounded p-2">
                       <div className="text-sm text-gray-500">
-                        {new Date(event.start_date).toLocaleDateString('ja-JP', {year: 'numeric', month: 'short'}).replace(/\s+/g, '年')}月
+                        {new Date(event.start_date).toLocaleDateString('ja-JP', {year: 'numeric', month: 'short'}).replace(/\s+/g, '年')}
                       </div>
                       <div className="text-2xl font-bold">
                         {new Date(event.start_date).getDate()}
@@ -320,13 +320,13 @@ export default function ArtistDetail({ artistId }) {
                       <div className="text-xs text-gray-500">
                         {new Date(event.start_date).toLocaleDateString('ja-JP', {weekday: 'short'})}
                       </div>
-                      {event.times && event.times.length > 0 && (
-                        <div className="text-sm font-medium text-blue-600 mt-1">
-                          {event.times.length > 1 
+                      <div className="text-sm font-medium text-blue-600 mt-1 min-h-6">
+                        {event.times && event.times.length > 0 
+                          ? (event.times.length > 1 
                             ? event.times.join(' / ') 
-                            : event.times[0]}
-                        </div>
-                      )}
+                            : event.times[0])
+                          : "時間未定"}
+                      </div>
                     </div>
                   </div>
                   
@@ -347,7 +347,7 @@ export default function ArtistDetail({ artistId }) {
                   <div className="w-full md:w-auto flex items-center space-x-2 mt-4 md:mt-0">
                     {/* チケットURLがある場合のボタン */}
                     {event.ticket_url && (
-                       <a 
+                        <a 
                         href={event.ticket_url}
                         target="_blank"
                         rel="noopener noreferrer"
