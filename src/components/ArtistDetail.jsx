@@ -307,71 +307,74 @@ export default function ArtistDetail({ artistId }) {
           <div className="bg-white rounded-lg shadow overflow-hidden">
             {events.length > 0 ? (
               events.map(event => (
-                <div key={event.id} className="border-b last:border-b-0 p-4 flex flex-wrap md:flex-nowrap items-center hover:bg-gray-50 transition">
-                  {/* 日付 - 幅を固定して統一感を出す */}
-                  <div className="w-24 md:w-28 md:mr-6 mb-4 md:mb-0 text-center flex-shrink-0">
-                    <div className="bg-gray-100 rounded p-2">
-                      <div className="text-sm text-gray-500">
-                        {new Date(event.start_date).toLocaleDateString('ja-JP', {year: 'numeric', month: 'short'}).replace(/\s+/g, '年')}
-                      </div>
-                      <div className="text-2xl font-bold">
-                        {new Date(event.start_date).getDate()}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(event.start_date).toLocaleDateString('ja-JP', {weekday: 'short'})}
-                      </div>
-                      <div className="text-sm font-medium text-blue-600 mt-1 min-h-6">
-                        {event.times && event.times.length > 0 
-                          ? (event.times.length > 1 
-                            ? event.times.join(' / ') 
-                            : event.times[0])
-                          : "時間未定"}
-                      </div>
+                <div key={event.id} className="border-b last:border-b-0 p-4 flex items-start hover:bg-gray-50 transition">
+                  {/* 日付 - どのサイズでも左側に固定 */}
+                  <div className="w-16 mr-4 flex-shrink-0 text-center">
+                    <div className="text-sm text-gray-500">
+                      {new Date(event.start_date).toLocaleDateString('ja-JP', {month: 'short'}).replace(/\s+/g, '')}
+                    </div>
+                    <div className="text-2xl font-bold leading-tight">
+                      {new Date(event.start_date).getDate()}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(event.start_date).toLocaleDateString('ja-JP', {weekday: 'short'})}
                     </div>
                   </div>
                   
-                  {/* イベント詳細 */}
-                  <div className="flex-grow md:mr-4">
-                    <h3 className="font-medium mb-1">{event.title || `${artist.name} コンサート`}</h3>
-                    {event.event_type && (
-                      <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded mr-2">
-                        {event.event_type}
-                      </span>
-                    )}
-                    <div className="text-sm text-gray-600 mb-1">
-                      {event.venue_prefecture || '会場未定'}
+                  {/* イベント詳細とボタン */}
+                  <div className="flex-grow">
+                    {/* イベント詳細 */}
+                    <div className="mb-2">
+                      <h3 className="font-medium">{event.title || `${artist.name} コンサート`}</h3>
+                      
+                      <div className="flex flex-wrap items-center mt-1">
+                        {event.event_type && (
+                          <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded mr-2 mb-1">
+                            {event.event_type}
+                          </span>
+                        )}
+                        
+                        <span className="text-sm text-gray-600 mb-1">
+                          {event.venue_prefecture || '会場未定'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* アクションボタン */}
-                  <div className="w-full md:w-auto flex items-center space-x-2 mt-4 md:mt-0">
-                    {/* チケットURLがある場合のボタン */}
-                    {event.ticket_url && (
-                        <a 
-                        href={event.ticket_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-500 hover:text-green-500 transition"
-                        title="チケット購入"
-                      >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
-                        </svg>
-                      </a>
-                    )}
                     
-                    {/* グループ化されたイベントそれぞれに詳細ボタンを表示 */}
-                    {event.groupedEvents && event.groupedEvents.map((groupedEvent, index) => (
-                      <a 
-                        key={`${groupedEvent.id}-${index}`}
-                        href={`/helloproject-event/events/${groupedEvent.id}`}
-                        className="bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 px-4 rounded transition"
-                      >
-                        {event.times && event.times.length > 1 
-                          ? `${event.times[index] || ''}詳細` 
-                          : '詳細'}
-                      </a>
-                    ))}
+                    {/* アクションボタン */}
+                    <div className="flex items-center space-x-2 mt-2">
+                      {/* チケットURLがある場合のボタン */}
+                      {event.ticket_url && (
+                        <a 
+                          href={event.ticket_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-500 hover:text-green-500 transition"
+                          title="チケット購入"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
+                          </svg>
+                        </a>
+                      )}
+                      
+                      {/* グループ化されたイベントそれぞれに詳細ボタンを表示 */}
+                      {event.groupedEvents && event.groupedEvents.map((groupedEvent, index) => {
+                        // 開演時間がある場合はその時間をボタンに表示、ない場合は「詳細」と表示
+                        const buttonLabel = (event.times && event.times.length > 0 && event.times[index]) 
+                          ? event.times[index] 
+                          : '詳細';
+                        
+                        return (
+                          <a 
+                            key={`${groupedEvent.id}-${index}`}
+                            href={`/helloproject-event/events/${groupedEvent.id}`}
+                            className="bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-3 rounded transition"
+                          >
+                            {buttonLabel}
+                          </a>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ))
@@ -401,7 +404,7 @@ export default function ArtistDetail({ artistId }) {
             )}
           </div>
         </div>
-        
+                
         {/* アーティスト情報 */}
         <div id="about" className="mb-12">
           <h2 className="text-2xl font-bold mb-6">アーティスト情報</h2>
