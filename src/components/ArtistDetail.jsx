@@ -27,33 +27,73 @@ export default function ArtistDetail({ artistId }) {
         // アーティスト情報を取得（SNSリンクを含む）
         const { data: artistData, error: artistError } = await supabase
           .from('artists')
-          .select('*, twitter_url, instagram_url, youtube_url, tiktok_url, website_url') // SNS URLを明示的に指定
+          .select('*')
           .eq('id', artistId)
           .single();
 
         if (artistError) throw artistError;
         setArtist(artistData);
 
-        // artist_eventsテーブルを介さずに直接eventsテーブルから取得（テスト用）
-        // 実際の環境では適切な結合が必要です
-        const { data: eventsData, error: eventsError } = await supabase
-          .from('events')
-          .select(`
-            id,
-            title,
-            start_date,
-            venues(name, address)
-          `)
-          .gt('start_date', new Date().toISOString())
-          .order('start_date', { ascending: true })
-          .limit(5); // テスト用に少数のイベントを取得
+        // イベント情報を取得（まずは単純なクエリで）
+        console.log('イベント情報の取得開始');
+        const { data: artistEventData, error: artistEventError } = await supabase
+          .from('artist_events')
+          .select('event_id')
+          .eq('artist_id', artistId);
 
-        // エラーをスキップしてデータが取得できた場合のみ設定
-        if (!eventsError && eventsData) {
-          setEvents(eventsData);
+        if (artistEventError) {
+          console.error('アーティストイベント関連取得エラー:', artistEventError);
+          throw artistEventError;
+        }
+        
+        console.log('アーティストイベント関連:', artistEventData);
+        
+        // イベントIDのみを抽出
+        const eventIds = artistEventData ? artistEventData.map(item => item.event_id) : [];
+        
+        if (eventIds.length > 0) {
+          // イベント詳細情報を取得
+          const { data: eventsData, error: eventsError } = await supabase
+            .from('events')
+            .select(`
+              id, 
+              title, 
+              description, 
+              start_date, 
+              end_date, 
+              start_time, 
+              end_time,
+              venue_id,
+              venue_prefecture,
+              ticket_url,
+              is_completed,
+              event_type
+            `)
+            .in('id', eventIds)
+            .order('start_date', { ascending: true });
+            
+          if (eventsError) {
+            console.error('イベント詳細取得エラー:', eventsError);
+            throw eventsError;
+          }
+          
+          console.log('取得したイベント情報:', eventsData);
+          
+          // 有効なイベントのみをフィルタリング
+          const now = new Date();
+          const validEvents = eventsData
+            .filter(event => !event.is_completed && new Date(event.start_date) >= now)
+            .sort((a, b) => {
+              if (a.start_date === b.start_date) {
+                return a.start_time > b.start_time ? 1 : -1;
+              }
+              return new Date(a.start_date) > new Date(b.start_date) ? 1 : -1;
+            });
+          
+          setEvents(validEvents);
         } else {
-          console.log('イベント取得結果:', eventsError || 'データなし');
-          setEvents([]); // 空の配列を設定
+          console.log('このアーティストのイベントは見つかりませんでした');
+          setEvents([]);
         }
 
         // フォロー状態を確認
@@ -104,6 +144,13 @@ export default function ArtistDetail({ artistId }) {
     }
   };
 
+  // 時間を表示用にフォーマット
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '';
+    // HH:MM:SSの形式 -> HH:MM の形式に変換
+    return timeStr.substring(0, 5);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -136,9 +183,6 @@ export default function ArtistDetail({ artistId }) {
       </div>
     );
   }
-
-  // 表示用のイベントデータ
-  const displayEvents = events;
 
   return (
     <div>
@@ -176,21 +220,19 @@ export default function ArtistDetail({ artistId }) {
                   </svg>
                   フォロワー数: 計算中...
                 </span>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${displayEvents.length > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${events.length > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
-                  近日イベント: {displayEvents.length} 件
+                  近日イベント: {events.length} 件
                 </span>
               </div>
               
               <p className="mb-6 max-w-2xl">
-  <>
-    {`${artist.name}の最新イベント情報をチェック！`}
-    <br />
-    {`コンサート・ライブ・イベントの公演情報を受け取ることができます。`}
-  </>
-</p>
+                {`${artist.name}の最新イベント情報をチェック！`}
+                <br />
+                {`コンサート・ライブ・イベントの公演情報を受け取ることができます。`}
+              </p>
               
               <button 
                 onClick={toggleFollow}
@@ -237,8 +279,8 @@ export default function ArtistDetail({ artistId }) {
           </div>
           
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            {displayEvents.length > 0 ? (
-              displayEvents.map(event => (
+            {events.length > 0 ? (
+              events.map(event => (
                 <div key={event.id} className="border-b last:border-b-0 p-4 flex flex-wrap md:flex-nowrap items-center hover:bg-gray-50 transition">
                   {/* 日付 */}
                   <div className="w-full md:w-auto md:mr-6 mb-4 md:mb-0 text-center">
@@ -252,27 +294,43 @@ export default function ArtistDetail({ artistId }) {
                       <div className="text-xs text-gray-500">
                         {new Date(event.start_date).toLocaleDateString('ja-JP', {weekday: 'short'})}
                       </div>
+                      {event.start_time && (
+                        <div className="text-sm font-medium text-blue-600 mt-1">
+                          {formatTime(event.start_time)}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
                   {/* イベント詳細 */}
                   <div className="flex-grow md:mr-4">
                     <h3 className="font-medium mb-1">{event.title || `${artist.name} コンサート`}</h3>
+                    {event.event_type && (
+                      <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded mr-2">
+                        {event.event_type}
+                      </span>
+                    )}
                     <div className="text-sm text-gray-600 mb-1">
-                      {event.venues?.name || '会場未定'}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {event.venues?.address || '住所情報なし'}
+                      {event.venue_prefecture || '会場未定'}
                     </div>
                   </div>
                   
                   {/* アクションボタン */}
                   <div className="w-full md:w-auto flex items-center space-x-2 mt-4 md:mt-0">
-                    <button className="text-gray-400 hover:text-red-500 transition">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                      </svg>
-                    </button>
+                    
+                    {event.ticket_url && (
+                      <a
+                        href={event.ticket_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-500 hover:text-green-500 transition"
+                        title="チケット購入"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
+                        </svg>
+                      </a>
+                    )}
                     <a 
                       href={`/helloproject-event/events/${event.id}`}
                       className="bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 px-4 rounded transition"
@@ -378,7 +436,7 @@ export default function ArtistDetail({ artistId }) {
                     </svg>
                   </a>
                 )}
-                {artist.tiktok_url && (
+             {artist.tiktok_url && (
                   <a 
                     href={artist.tiktok_url} 
                     target="_blank" 
