@@ -321,10 +321,9 @@ export default function ArtistDetail({ artistId }) {
                     </div>
                   </div>
                   
-                  {/* イベント詳細とボタン */}
+                  {/* イベント詳細 */}
                   <div className="flex-grow">
-                    {/* イベント詳細 */}
-                    <div className="mb-2">
+                    <div>
                       <h3 className="font-medium">{event.title || `${artist.name} コンサート`}</h3>
                       
                       <div className="flex flex-wrap items-center mt-1">
@@ -339,25 +338,27 @@ export default function ArtistDetail({ artistId }) {
                         </span>
                       </div>
                     </div>
+                  </div>
+                  
+                  {/* アクションボタン - 右端固定 */}
+                  <div className="ml-3 flex-shrink-0 flex items-center">
+                    {/* チケットURLがある場合のボタン */}
+                    {event.ticket_url && (
+                      <a 
+                        href={event.ticket_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-500 hover:text-green-500 transition mr-2 self-center"
+                        title="チケット購入"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
+                        </svg>
+                      </a>
+                    )}
                     
-                    {/* アクションボタン */}
-                    <div className="flex items-center space-x-2 mt-2">
-                      {/* チケットURLがある場合のボタン */}
-                      {event.ticket_url && (
-                        <a 
-                          href={event.ticket_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gray-500 hover:text-green-500 transition"
-                          title="チケット購入"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
-                          </svg>
-                        </a>
-                      )}
-                      
-                      {/* グループ化されたイベントそれぞれに詳細ボタンを表示 */}
+                    {/* グループ化されたイベントボタンを縦に並べる */}
+                    <div className="flex flex-col space-y-2 justify-center">
                       {event.groupedEvents && event.groupedEvents.map((groupedEvent, index) => {
                         // 開演時間がある場合はその時間をボタンに表示、ない場合は「詳細」と表示
                         const buttonLabel = (event.times && event.times.length > 0 && event.times[index]) 
@@ -368,7 +369,7 @@ export default function ArtistDetail({ artistId }) {
                           <a 
                             key={`${groupedEvent.id}-${index}`}
                             href={`/helloproject-event/events/${groupedEvent.id}`}
-                            className="bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-3 rounded transition"
+                            className="bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-3 rounded transition text-center w-16"
                           >
                             {buttonLabel}
                           </a>
