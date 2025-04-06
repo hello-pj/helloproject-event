@@ -6,96 +6,122 @@ import supabase from '../lib/supabase';
 import { addToFavorites, removeFromFavorites } from '../lib/data-service';
 import EventMap from './EventMap';
 
+
 export default function ArtistDetail({ artistId }) {
   const [artist, setArtist] = useState(null);
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState([]); // 予定イベント
+  const [pastEvents, setPastEvents] = useState([]); // 過去イベント
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
+  // タブ切り替え用の状態
+  const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' または 'past'
+
 
   // アーティスト情報とイベント情報を取得
-  useEffect(() => {
-    const fetchArtistData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+// src/components/ArtistDetail.jsx のuseEffect部分
 
-        // 現在のユーザーを取得
-        const currentUser = auth.currentUser;
-        setUser(currentUser);
+useEffect(() => {
+  const fetchArtistData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        // アーティスト情報を取得（SNSリンクを含む）
-        const { data: artistData, error: artistError } = await supabase
-          .from('artists')
-          .select('*')
-          .eq('id', artistId)
-          .single();
+      // 現在のユーザーを取得
+      const currentUser = auth.currentUser;
+      setUser(currentUser);
 
-        if (artistError) throw artistError;
-        setArtist(artistData);
+      // アーティスト情報を取得（SNSリンクを含む）
+      const { data: artistData, error: artistError } = await supabase
+        .from('artists')
+        .select('*')
+        .eq('id', artistId)
+        .single();
 
-        // イベント情報を取得（まずは単純なクエリで）
-        console.log('イベント情報の取得開始');
-        const { data: artistEventData, error: artistEventError } = await supabase
-          .from('artist_events')
-          .select('event_id')
-          .eq('artist_id', artistId);
+      if (artistError) throw artistError;
+      setArtist(artistData);
 
-        if (artistEventError) {
-          console.error('アーティストイベント関連取得エラー:', artistEventError);
-          throw artistEventError;
+      // イベント情報を取得（まずは単純なクエリで）
+      console.log('イベント情報の取得開始');
+      const { data: artistEventData, error: artistEventError } = await supabase
+        .from('artist_events')
+        .select('event_id')
+        .eq('artist_id', artistId);
+
+      if (artistEventError) {
+        console.error('アーティストイベント関連取得エラー:', artistEventError);
+        throw artistEventError;
+      }
+      
+      console.log('アーティストイベント関連:', artistEventData);
+      
+      // イベントIDのみを抽出
+      const eventIds = artistEventData ? artistEventData.map(item => item.event_id) : [];
+      
+      if (eventIds.length > 0) {
+        // イベント詳細情報を取得（すべて取得し、後で分類）
+        const { data: eventsData, error: eventsError } = await supabase
+          .from('events')
+          .select(`
+            id, 
+            title, 
+            description, 
+            start_date, 
+            end_date, 
+            start_time, 
+            end_time,
+            venue_id,
+            venue_prefecture,
+            ticket_url,
+            is_completed,
+            event_type
+          `)
+          .in('id', eventIds)
+          .order('start_date', { ascending: false }); // 日付の降順で取得
+          
+        if (eventsError) {
+          console.error('イベント詳細取得エラー:', eventsError);
+          throw eventsError;
         }
         
-        console.log('アーティストイベント関連:', artistEventData);
+        console.log('取得したイベント情報:', eventsData);
         
-        // イベントIDのみを抽出
-        const eventIds = artistEventData ? artistEventData.map(item => item.event_id) : [];
+        // 現在の日付
+        const now = new Date();
         
-        if (eventIds.length > 0) {
-          // イベント詳細情報を取得
-          const { data: eventsData, error: eventsError } = await supabase
-            .from('events')
-            .select(`
-              id, 
-              title, 
-              description, 
-              start_date, 
-              end_date, 
-              start_time, 
-              end_time,
-              venue_id,
-              venue_prefecture,
-              ticket_url,
-              is_completed,
-              event_type
-            `)
-            .in('id', eventIds)
-            .order('start_date', { ascending: true });
-            
-          if (eventsError) {
-            console.error('イベント詳細取得エラー:', eventsError);
-            throw eventsError;
-          }
+        // 予定イベントと過去イベントを分類
+        const upcomingEventsRaw = eventsData
+          .filter(event => !event.is_completed && new Date(event.start_date) >= now)
+          .sort((a, b) => new Date(a.start_date) - new Date(b.start_date)); // 昇順（近い順）
           
-          console.log('取得したイベント情報:', eventsData);
-          
-          // 有効なイベントのみをフィルタリング
-          const now = new Date();
-          const validEvents = eventsData
-            .filter(event => !event.is_completed && new Date(event.start_date) >= now)
-            .sort((a, b) => {
-              if (a.start_date === b.start_date) {
-                return a.start_time > b.start_time ? 1 : -1;
-              }
-              return new Date(a.start_date) > new Date(b.start_date) ? 1 : -1;
-            });
-          
-          // 同じ日・同じタイトル・同じ会場のイベントをグループ化
+        const pastEventsRaw = eventsData
+          .filter(event => event.is_completed || new Date(event.start_date) < now)
+          .sort((a, b) => new Date(b.start_date) - new Date(a.start_date)); // 降順（新しい順）
+        
+        // 期間制限（オプション）- 現在は6ヶ月としています
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        
+        const sixMonthsLater = new Date();
+        sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+        
+        // 過去イベントは直近6ヶ月のみに制限（オプション）
+        const limitedPastEvents = pastEventsRaw
+          .filter(event => new Date(event.start_date) >= sixMonthsAgo)
+          .slice(0, 5); // 最大5件まで表示
+        
+        // 予定イベントも6ヶ月先までに制限（オプション）
+        const limitedUpcomingEvents = upcomingEventsRaw
+          .filter(event => new Date(event.start_date) <= sixMonthsLater)
+          .slice(0, 10); // 最大10件まで表示
+        
+        // イベントをグループ化する関数
+        const groupEvents = (events) => {
           const groupedEvents = [];
           const eventGroups = {};
           
-          validEvents.forEach(event => {
+          events.forEach(event => {
             // グループキーを生成（日付+タイトル+会場）
             const groupKey = `${event.start_date}_${event.title || 'untitled'}_${event.venue_prefecture || 'unknown'}`;
             
@@ -116,35 +142,41 @@ export default function ArtistDetail({ artistId }) {
             }
           });
           
-          setEvents(groupedEvents);
-        } else {
-          console.log('このアーティストのイベントは見つかりませんでした');
-          setEvents([]);
-        }
-
-        // フォロー状態を確認
-        if (currentUser) {
-          const { data: favorite, error: favoriteError } = await supabase
-            .from('user_favorites')
-            .select('id')
-            .eq('user_id', currentUser.uid)
-            .eq('artist_id', artistId)
-            .single();
-
-          if (!favoriteError && favorite) {
-            setIsFollowing(true);
-          }
-        }
-      } catch (err) {
-        console.error('データ取得エラー:', err);
-        setError('アーティスト情報の読み込みに失敗しました');
-      } finally {
-        setLoading(false);
+          return groupedEvents;
+        };
+        
+        // グループ化して状態を更新
+        setEvents(groupEvents(limitedUpcomingEvents));
+        setPastEvents(groupEvents(limitedPastEvents));
+      } else {
+        console.log('このアーティストのイベントは見つかりませんでした');
+        setEvents([]);
+        setPastEvents([]);
       }
-    };
 
-    fetchArtistData();
-  }, [artistId]);
+      // フォロー状態を確認
+      if (currentUser) {
+        const { data: favorite, error: favoriteError } = await supabase
+          .from('user_favorites')
+          .select('id')
+          .eq('user_id', currentUser.uid)
+          .eq('artist_id', artistId)
+          .single();
+
+        if (!favoriteError && favorite) {
+          setIsFollowing(true);
+        }
+      }
+    } catch (err) {
+      console.error('データ取得エラー:', err);
+      setError('アーティスト情報の読み込みに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchArtistData();
+}, [artistId]);
 
   // フォロー状態の切り替え
   const toggleFollow = async () => {
@@ -297,117 +329,204 @@ export default function ArtistDetail({ artistId }) {
             </nav>
           </div>
           
-          {/* 近日のイベント */}
-          <div id="events" className="mb-12">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">近日のイベント</h2>
-              <a href={`/helloproject-event/events?artist=${artistId}`} className="text-blue-500 hover:underline">
-                すべて表示 &rarr;
-              </a>
+{/* 近日のイベント → イベントに改名 */}
+<div id="events" className="mb-12">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-2xl font-bold">イベント</h2>
+    <a href={`/helloproject-event/events?artist=${artistId}`} className="text-blue-500 hover:underline">
+      すべて表示 &rarr;
+    </a>
+  </div>
+  
+  {/* イベントタブ */}
+  <div className="flex border-b mb-4">
+    <button
+      onClick={() => setActiveTab('upcoming')}
+      className={`py-2 px-4 font-medium ${activeTab === 'upcoming' 
+        ? 'text-blue-500 border-b-2 border-blue-500' 
+        : 'text-gray-500 hover:text-gray-700'}`}
+    >
+      予定
+      {events.length > 0 && <span className="ml-2 bg-blue-100 text-blue-800 text-xs py-0.5 px-2 rounded-full">{events.length}</span>}
+    </button>
+    <button
+      onClick={() => setActiveTab('past')}
+      className={`py-2 px-4 font-medium ${activeTab === 'past' 
+        ? 'text-blue-500 border-b-2 border-blue-500' 
+        : 'text-gray-500 hover:text-gray-700'}`}
+    >
+      過去
+      {pastEvents.length > 0 && <span className="ml-2 bg-gray-100 text-gray-800 text-xs py-0.5 px-2 rounded-full">{pastEvents.length}</span>}
+    </button>
+  </div>
+  
+  <div className="bg-white rounded-lg shadow overflow-hidden">
+    {activeTab === 'upcoming' ? (
+      events.length > 0 ? (
+        events.map(event => (
+          <div key={event.id} className="border-b last:border-b-0 p-4 flex items-start hover:bg-gray-50 transition">
+            {/* 日付 - どのサイズでも左側に固定 */}
+            <div className="w-16 mr-4 flex-shrink-0 text-center">
+              <div className="text-sm text-gray-500">
+                {new Date(event.start_date).toLocaleDateString('ja-JP', {month: 'short'}).replace(/\s+/g, '')}
+              </div>
+              <div className="text-2xl font-bold leading-tight">
+                {new Date(event.start_date).getDate()}
+              </div>
+              <div className="text-xs text-gray-500">
+                {new Date(event.start_date).toLocaleDateString('ja-JP', {weekday: 'short'})}
+              </div>
             </div>
             
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              {events.length > 0 ? (
-                events.map(event => (
-                  <div key={event.id} className="border-b last:border-b-0 p-4 flex items-start hover:bg-gray-50 transition">
-                    {/* 日付 - どのサイズでも左側に固定 */}
-                    <div className="w-16 mr-4 flex-shrink-0 text-center">
-                      <div className="text-sm text-gray-500">
-                        {new Date(event.start_date).toLocaleDateString('ja-JP', {month: 'short'}).replace(/\s+/g, '')}
-                      </div>
-                      <div className="text-2xl font-bold leading-tight">
-                        {new Date(event.start_date).getDate()}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(event.start_date).toLocaleDateString('ja-JP', {weekday: 'short'})}
-                      </div>
-                    </div>
-                    
-                    {/* イベント詳細 - 最大幅を制限 */}
-                    <div className="flex-1 flex justify-between items-center">
-                      <div className="mr-4">
-                        <h3 className="font-medium">{event.title || `${artist.name} コンサート`}</h3>
-                        
-                        <div className="flex flex-wrap items-center mt-1">
-                          {event.event_type && (
-                            <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded mr-2 mb-1">
-                              {event.event_type}
-                            </span>
-                          )}
-                          
-                          <span className="text-sm text-gray-600 mb-1">
-                            {event.venue_prefecture || '会場未定'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* アクションボタン - 常に右端に固定 */}
-                      <div className="flex-shrink-0 flex items-center">
-                        {/* チケットURLがある場合のボタン */}
-                        {event.ticket_url && (
-                          <a 
-                            href={event.ticket_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-500 hover:text-green-500 transition mr-2 self-center"
-                            title="チケット購入"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
-                            </svg>
-                          </a>
-                        )}
-                        
-                        {/* グループ化されたイベントボタンを縦に並べる */}
-                        <div className="flex flex-col space-y-2 justify-center">
-                          {event.groupedEvents && event.groupedEvents.map((groupedEvent, index) => {
-                            // 開演時間がある場合はその時間をボタンに表示、ない場合は「詳細」と表示
-                            const buttonLabel = (event.times && event.times.length > 0 && event.times[index]) 
-                              ? event.times[index] 
-                              : '詳細';
-                            
-                            return (
-                              <a 
-                                key={`${groupedEvent.id}-${index}`}
-                                href={`/helloproject-event/events/${groupedEvent.id}`}
-                                className="bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-3 rounded transition text-center w-16"
-                              >
-                                {buttonLabel}
-                              </a>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gray-100 rounded-full">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">{artist.name}の予定されたイベントはありません</h3>
-                  <p className="text-gray-500 mb-4">現在、公式に発表されているイベントはありません。</p>
-                  <button
-                    onClick={toggleFollow}
-                    className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${
-                      isFollowing 
-                        ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' 
-                        : 'border-blue-500 bg-blue-500 text-white hover:bg-blue-600'
-                    }`}
-                  >
-                    <svg className="w-4 h-4 mr-2" fill={isFollowing ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                    </svg>
-                    {isFollowing ? '通知設定済み' : 'イベントの通知を受け取る'}
-                  </button>
+            {/* イベント詳細 - 最大幅を制限 */}
+            <div className="flex-1 flex justify-between items-center">
+              <div className="mr-4">
+                <h3 className="font-medium">{event.title || `${artist.name} コンサート`}</h3>
+                
+                <div className="flex flex-wrap items-center mt-1">
+                  {event.event_type && (
+                    <span className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded mr-2 mb-1">
+                      {event.event_type}
+                    </span>
+                  )}
+                  
+                  <span className="text-sm text-gray-600 mb-1">
+                    {event.venue_prefecture || '会場未定'}
+                  </span>
                 </div>
-              )}
+              </div>
+              
+              {/* アクションボタン - 常に右端に固定 */}
+              <div className="flex-shrink-0 flex items-center">
+                {/* チケットURLがある場合のボタン */}
+                {event.ticket_url && (
+                  <a 
+                    href={event.ticket_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-500 hover:text-green-500 transition mr-2 self-center"
+                    title="チケット購入"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
+                    </svg>
+                  </a>
+                )}
+                
+                {/* グループ化されたイベントボタンを縦に並べる */}
+                <div className="flex flex-col space-y-2 justify-center">
+                  {event.groupedEvents && event.groupedEvents.map((groupedEvent, index) => {
+                    // 開演時間がある場合はその時間をボタンに表示、ない場合は「詳細」と表示
+                    const buttonLabel = (event.times && event.times.length > 0 && event.times[index]) 
+                      ? event.times[index] 
+                      : '詳細';
+                    
+                    return (
+                      <a 
+                        key={`${groupedEvent.id}-${index}`}
+                        href={`/helloproject-event/events/${groupedEvent.id}`}
+                        className="bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-3 rounded transition text-center w-16"
+                      >
+                        {buttonLabel}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
-          
+        ))
+      ) : (
+        <div className="p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gray-100 rounded-full">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{artist.name}の予定されたイベントはありません</h3>
+          <p className="text-gray-500 mb-4">現在、公式に発表されているイベントはありません。</p>
+          <button
+            onClick={toggleFollow}
+            className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${
+              isFollowing 
+                ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' 
+                : 'border-blue-500 bg-blue-500 text-white hover:bg-blue-600'
+            }`}
+          >
+            <svg className="w-4 h-4 mr-2" fill={isFollowing ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            {isFollowing ? '通知設定済み' : 'イベントの通知を受け取る'}
+          </button>
+        </div>
+      )
+    ) : (
+      // 過去のイベント表示
+      pastEvents.length > 0 ? (
+        pastEvents.map(event => (
+          <div key={event.id} className="border-b last:border-b-0 p-4 flex items-start hover:bg-gray-50 transition">
+            {/* 日付 - どのサイズでも左側に固定 */}
+            <div className="w-16 mr-4 flex-shrink-0 text-center">
+              <div className="text-sm text-gray-500">
+                {new Date(event.start_date).toLocaleDateString('ja-JP', {month: 'short'}).replace(/\s+/g, '')}
+              </div>
+              <div className="text-2xl font-bold leading-tight">
+                {new Date(event.start_date).getDate()}
+              </div>
+              <div className="text-xs text-gray-500">
+                {new Date(event.start_date).toLocaleDateString('ja-JP', {weekday: 'short'})}
+              </div>
+            </div>
+            
+            {/* イベント詳細 - 過去のイベントは少し色を変える */}
+            <div className="flex-1 flex justify-between items-center opacity-80">
+              <div className="mr-4">
+                <h3 className="font-medium">{event.title || `${artist.name} コンサート`}</h3>
+                
+                <div className="flex flex-wrap items-center mt-1">
+                  {event.event_type && (
+                    <span className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded mr-2 mb-1">
+                      {event.event_type}
+                    </span>
+                  )}
+                  
+                  <span className="text-sm text-gray-600 mb-1">
+                    {event.venue_prefecture || '会場未定'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* 過去のイベントでも詳細ボタンは表示 */}
+              <div className="flex-shrink-0 flex items-center">
+                <div className="flex flex-col space-y-2 justify-center">
+                  {event.groupedEvents && event.groupedEvents.map((groupedEvent, index) => (
+                    <a 
+                      key={`${groupedEvent.id}-${index}`}
+                      href={`/helloproject-event/events/${groupedEvent.id}`}
+                      className="bg-gray-500 hover:bg-gray-600 text-white text-xs py-1 px-3 rounded transition text-center w-16"
+                    >
+                      詳細
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gray-100 rounded-full">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">過去のイベント情報はありません</h3>
+          <p className="text-gray-500 mb-4">過去6ヶ月以内に開催されたイベント記録はありません。</p>
+        </div>
+      )
+    )}
+  </div>
+</div>
           {/* アーティスト情報 */}
           <div id="about" className="mb-12">
             <h2 className="text-2xl font-bold mb-6">アーティスト情報</h2>
